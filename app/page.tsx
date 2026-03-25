@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import Image from 'next/image'
+
 
 type State = 'idle' | 'loading' | 'done' | 'error'
 
@@ -14,7 +14,9 @@ export default function Home() {
   const [isDragging, setIsDragging] = useState(false)
 
   const processImage = useCallback(async (file: File) => {
-    if (!file.type.match(/image\/(jpeg|png)/)) {
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+    const validType = file.type.match(/image\/(jpeg|jpg|png)/) || ['jpg', 'jpeg', 'png'].includes(ext)
+    if (!validType) {
       setErrorMsg('仅支持 JPG、PNG 格式')
       setState('error')
       return
@@ -25,7 +27,7 @@ export default function Home() {
       return
     }
 
-    setOriginalUrl(URL.createObjectURL(file))
+    setOriginalUrl('')
     setState('loading')
     setErrorMsg('')
 
@@ -34,13 +36,28 @@ export default function Home() {
 
     try {
       const res = await fetch('/api/remove-bg', { method: 'POST', body: formData })
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || '处理失败')
+      const contentType = res.headers.get('content-type') ?? ''
+
+      if (!res.ok || !contentType.includes('image')) {
+        let errMsg = '处理失败'
+        try {
+          const data = await res.json()
+          errMsg = data.error || errMsg
+        } catch {
+          errMsg = `处理失败 (HTTP ${res.status})`
+        }
+        throw new Error(errMsg)
       }
+
       const blob = await res.blob()
+      if (blob.size === 0) throw new Error('返回图片为空，请重试')
+
+      const originalObjectUrl = URL.createObjectURL(file)
+      const resultObjectUrl = URL.createObjectURL(blob)
+
+      setOriginalUrl(originalObjectUrl)
       setResultBlob(blob)
-      setResultUrl(URL.createObjectURL(blob))
+      setResultUrl(resultObjectUrl)
       setState('done')
     } catch (e: unknown) {
       setErrorMsg(e instanceof Error ? e.message : '未知错误')
@@ -99,7 +116,7 @@ export default function Home() {
               <span className="text-6xl mb-4">📸</span>
               <span className="text-xl font-semibold text-gray-700 mb-1">点击或拖拽图片到这里</span>
               <span className="text-sm text-gray-400">支持 JPG、PNG 格式，最大 10MB</span>
-              <input type="file" accept="image/jpeg,image/png" className="hidden" onChange={handleFileInput} />
+              <input type="file" accept="image/jpeg,image/jpg,image/png" className="hidden" onChange={handleFileInput} />
             </label>
 
             {state === 'error' && (
@@ -126,14 +143,16 @@ export default function Home() {
               <div className="text-center">
                 <p className="text-sm font-semibold text-gray-500 mb-2 uppercase tracking-wide">原图</p>
                 <div className="rounded-xl overflow-hidden border border-gray-200">
-                  <Image src={originalUrl} alt="原图" width={400} height={400} className="w-full object-contain max-h-64" unoptimized />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={originalUrl} alt="原图" className="w-full object-contain max-h-64" />
                 </div>
               </div>
               <div className="text-center">
                 <p className="text-sm font-semibold text-gray-500 mb-2 uppercase tracking-wide">去除背景后</p>
                 <div className="rounded-xl overflow-hidden border border-gray-200"
                   style={{ background: 'repeating-conic-gradient(#e5e7eb 0% 25%, white 0% 50%) 0 0 / 20px 20px' }}>
-                  <Image src={resultUrl} alt="处理结果" width={400} height={400} className="w-full object-contain max-h-64" unoptimized />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={resultUrl} alt="处理结果" className="w-full object-contain max-h-64" />
                 </div>
               </div>
             </div>

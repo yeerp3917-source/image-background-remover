@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
@@ -9,7 +11,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No image provided' }, { status: 400 })
     }
 
-    // 文件大小限制 10MB
     if (imageFile.size > 10 * 1024 * 1024) {
       return NextResponse.json({ error: '文件大小不能超过 10MB' }, { status: 400 })
     }
@@ -19,15 +20,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'API Key 未配置' }, { status: 500 })
     }
 
+    // 重新构造一个新的 FormData
     const removeBgForm = new FormData()
     removeBgForm.append('image_file', imageFile)
     removeBgForm.append('size', 'auto')
 
-    const response = await fetch('https://api.remove.bg/v1.0/removebg', {
-      method: 'POST',
-      headers: { 'X-Api-Key': apiKey },
-      body: removeBgForm,
-    })
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 55000)
+
+    let response: Response
+    try {
+      response = await fetch('https://api.remove.bg/v1.0/removebg', {
+        method: 'POST',
+        headers: {
+          'X-Api-Key': apiKey,
+        },
+        body: removeBgForm,
+        signal: controller.signal,
+      })
+    } finally {
+      clearTimeout(timeout)
+    }
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -42,10 +55,15 @@ export async function POST(request: NextRequest) {
     return new NextResponse(resultBuffer, {
       headers: {
         'Content-Type': 'image/png',
+        'Content-Length': resultBuffer.byteLength.toString(),
         'Content-Disposition': 'attachment; filename="no-background.png"',
       },
     })
-  } catch {
-    return NextResponse.json({ error: '网络错误，请检查网络连接后重试' }, { status: 500 })
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    if (msg.includes('abort') || msg.includes('AbortError')) {
+      return NextResponse.json({ error: '请求超时，请稍后重试' }, { status: 504 })
+    }
+    return NextResponse.json({ error: `处理错误: ${msg}` }, { status: 500 })
   }
 }
