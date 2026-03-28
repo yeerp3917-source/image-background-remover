@@ -5,10 +5,10 @@
   "packageManager": "npm@10.9.2",
   "scripts": {
     "dev": "next dev",
-    "build": "npx opennextjs-cloudflare build",
+    "build": "node ./node_modules/@opennextjs/cloudflare/dist/cli/index.js build",
     "start": "next start",
     "lint": "eslint",
-    "preview": "npx opennextjs-cloudflare preview"
+    "preview": "node ./node_modules/@opennextjs/cloudflare/dist/cli/index.js preview"
   },
   "dependencies": {
     "next": "15.2.9",
