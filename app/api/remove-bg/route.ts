@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
-
+export const runtime = 'edge';
 export const maxDuration = 60;
+
+import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,7 +21,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'API Key 未配置' }, { status: 500 })
     }
 
-    // 重新构造一个新的 FormData
     const removeBgForm = new FormData()
     removeBgForm.append('image_file', imageFile)
     removeBgForm.append('size', 'auto')
