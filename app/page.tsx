@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 
 
 type State = 'idle' | 'loading' | 'done' | 'error'
@@ -13,9 +13,27 @@ export default function Home() {
   const [errorMsg, setErrorMsg] = useState<string>('')
   const [isDragging, setIsDragging] = useState(false)
 
+  // Keep refs to revoke Object URLs and prevent memory leaks
+  const originalUrlRef = useRef<string>('')
+  const resultUrlRef = useRef<string>('')
+
+  const revokeUrls = () => {
+    if (originalUrlRef.current) {
+      URL.revokeObjectURL(originalUrlRef.current)
+      originalUrlRef.current = ''
+    }
+    if (resultUrlRef.current) {
+      URL.revokeObjectURL(resultUrlRef.current)
+      resultUrlRef.current = ''
+    }
+  }
+
   const processImage = useCallback(async (file: File) => {
     const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
-    const validType = file.type.match(/image\/(jpeg|jpg|png)/) || ['jpg', 'jpeg', 'png'].includes(ext)
+    // Use strict MIME check: image/jpeg covers .jpg and .jpeg; image/png covers .png
+    const validMime = /^image\/(jpeg|png)$/.test(file.type)
+    const validExt = ['jpg', 'jpeg', 'png'].includes(ext)
+    const validType = validMime || validExt
     if (!validType) {
       setErrorMsg('仅支持 JPG、PNG 格式')
       setState('error')
@@ -27,6 +45,8 @@ export default function Home() {
       return
     }
 
+    // Revoke previous Object URLs before creating new ones
+    revokeUrls()
     setOriginalUrl('')
     setState('loading')
     setErrorMsg('')
@@ -55,6 +75,10 @@ export default function Home() {
       const originalObjectUrl = URL.createObjectURL(file)
       const resultObjectUrl = URL.createObjectURL(blob)
 
+      // Track URLs in refs so they can be revoked later
+      originalUrlRef.current = originalObjectUrl
+      resultUrlRef.current = resultObjectUrl
+
       setOriginalUrl(originalObjectUrl)
       setResultBlob(blob)
       setResultUrl(resultObjectUrl)
@@ -80,12 +104,17 @@ export default function Home() {
   const handleDownload = () => {
     if (!resultBlob) return
     const a = document.createElement('a')
-    a.href = URL.createObjectURL(resultBlob)
+    const dlUrl = URL.createObjectURL(resultBlob)
+    a.href = dlUrl
     a.download = 'no-background.png'
     a.click()
+    // Revoke the temporary download URL after a short delay
+    setTimeout(() => URL.revokeObjectURL(dlUrl), 1000)
   }
 
   const handleReset = () => {
+    // Revoke all Object URLs to free memory
+    revokeUrls()
     setState('idle')
     setOriginalUrl('')
     setResultUrl('')

@@ -52,11 +52,20 @@ npx vercel
 
 ### Cloudflare Pages
 
+使用 `@opennextjs/cloudflare` 构建并通过 Wrangler 部署：
+
 ```bash
+# 1. 安装依赖
+npm install
+
+# 2. 构建（产物在 .open-next/assets）
 npm run build
+
+# 3. 部署到 Cloudflare Pages
+npx wrangler pages deploy .open-next/assets --project-name image-background-remover
 ```
 
-上传 `.next` 目录到 Cloudflare Pages，并配置环境变量。
+> **注意**：`REMOVE_BG_API_KEY` 等敏感环境变量请在 Cloudflare Pages Dashboard → Settings → Environment Variables 中配置，**不要**写入 `wrangler.toml` 提交到 git。
 
 ## 技术栈
 
