@@ -1,8 +1,12 @@
 name = "image-background-remover"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = ".open-next/assets"
+main = ".open-next/worker.js"
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
 
 # ⚠️ 不要在此处添加 REMOVE_BG_API_KEY！
-# 敏感环境变量请在 Cloudflare Pages Dashboard → Settings → Environment Variables 中配置。
+# 敏感环境变量请在 Cloudflare Workers Dashboard → Settings → Variables 中配置。
 [vars]
