@@ -22,5 +22,5 @@ binding = "ASSETS"
 # 然后把生成的 id 填入下面
 [[kv_namespaces]]
 binding = "CREDITS_KV"
-id = "your_kv_namespace_id_here"
-# preview_id = "your_preview_kv_namespace_id_here"  # 本地 wrangler dev 用
+id = "9321f530063f45cfa244d919273ed152"
+preview_id = "2886285e85b64c81bdc288c341d5a783"
