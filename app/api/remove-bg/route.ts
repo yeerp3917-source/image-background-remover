@@ -6,7 +6,7 @@ import { consumeOne } from '@/lib/credits'
 
 export async function POST(request: NextRequest) {
   // ── 鉴权 & 配额检查 ──────────────────────────────────────
-  const userId = getUserFromRequest(request)
+  const userId = await getUserFromRequest(request)
 
   if (!userId) {
     return NextResponse.json(
@@ -52,9 +52,7 @@ export async function POST(request: NextRequest) {
     try {
       response = await fetch('https://api.remove.bg/v1.0/removebg', {
         method: 'POST',
-        headers: {
-          'X-Api-Key': apiKey,
-        },
+        headers: { 'X-Api-Key': apiKey },
         body: removeBgForm,
         signal: controller.signal,
       })
@@ -74,8 +72,8 @@ export async function POST(request: NextRequest) {
 
     return new NextResponse(resultBuffer, {
       headers: {
-        'Content-Type': 'image/png',
-        'Content-Length': resultBuffer.byteLength.toString(),
+        'Content-Type':        'image/png',
+        'Content-Length':      resultBuffer.byteLength.toString(),
         'Content-Disposition': 'attachment; filename="no-background.png"',
       },
     })

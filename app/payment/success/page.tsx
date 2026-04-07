@@ -11,8 +11,7 @@ function PaymentSuccessContent() {
   const [credits, setCredits] = useState(0)
 
   useEffect(() => {
-    const orderId = searchParams.get('token')
-    const userId = searchParams.get('userId') || localStorage.getItem('userId') || ''
+    const orderId = searchParams.get('token') // PayPal 回调带的 token 参数即 orderId
 
     if (!orderId) {
       setStatus('error')
@@ -20,11 +19,11 @@ function PaymentSuccessContent() {
       return
     }
 
-    // 捕获支付
+    // 捕获支付（userId 由服务端从 session cookie 读取）
     fetch('/api/paypal-capture', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orderId, userId }),
+      body: JSON.stringify({ orderId }),
     })
       .then((r) => r.json())
       .then((data: { success?: boolean; credits?: number; error?: string }) => {

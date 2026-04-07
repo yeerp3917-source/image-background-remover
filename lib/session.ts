@@ -1,33 +1,49 @@
 /**
- * 简单的会话工具
- * 生产环境用 JWT cookie；本地 dev 用内存 Map
- *
- * 注意：此为极简实现，不含 OAuth。
- * 若需接入 Google OAuth，替换 getUserFromRequest 即可。
+ * 会话工具 —— 基于签名 JWT cookie
+ * 兼容 Cloudflare Workers / Edge Runtime
  */
 
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { signJWT, verifyJWT, type SessionPayload } from './jwt'
 
-// Demo: 从 cookie 中读取 userId（部署时替换为真实 JWT 验证）
-export function getUserFromRequest(request: NextRequest): string | null {
-  // 读取 session cookie
-  const sessionCookie = request.cookies.get('session')?.value
-  if (sessionCookie) {
-    try {
-      // 简单 base64 解码（生产环境应换为 JWT 验证）
-      const decoded = Buffer.from(sessionCookie, 'base64').toString('utf-8')
-      const session = JSON.parse(decoded) as { userId?: string }
-      return session.userId ?? null
-    } catch {
-      return null
-    }
-  }
+const COOKIE_NAME = 'session'
+const JWT_SECRET  = process.env.JWT_SECRET ?? 'dev-secret-please-change-in-production'
 
-  // 开发环境：从 header 读取（方便测试）
-  const devUserId = request.headers.get('x-dev-user-id')
-  if (devUserId && process.env.NODE_ENV === 'development') {
-    return devUserId
-  }
+/** 从请求中读取并验证 session；返回 payload 或 null */
+export async function getSession(request: NextRequest): Promise<SessionPayload | null> {
+  const token = request.cookies.get(COOKIE_NAME)?.value
+  if (!token) return null
+  return verifyJWT(token, JWT_SECRET)
+}
 
-  return null
+/** 从请求中获取 userId（快捷方式） */
+export async function getUserFromRequest(request: NextRequest): Promise<string | null> {
+  const session = await getSession(request)
+  return session?.sub ?? null
+}
+
+/** 将 session 写入 cookie（Set-Cookie header） */
+export async function setSessionCookie(
+  response: NextResponse,
+  payload: Omit<SessionPayload, 'iat' | 'exp'>
+): Promise<void> {
+  const token = await signJWT(payload, JWT_SECRET)
+  response.cookies.set(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure:   process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path:     '/',
+    maxAge:   60 * 60 * 24 * 30, // 30 天
+  })
+}
+
+/** 清除 session cookie */
+export function clearSessionCookie(response: NextResponse): void {
+  response.cookies.set(COOKIE_NAME, '', {
+    httpOnly: true,
+    secure:   process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path:     '/',
+    maxAge:   0,
+  })
 }
