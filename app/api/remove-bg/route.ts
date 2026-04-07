@@ -1,8 +1,29 @@
 export const maxDuration = 60;
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getUserFromRequest } from '@/lib/session'
+import { consumeOne } from '@/lib/credits'
 
 export async function POST(request: NextRequest) {
+  // ── 鉴权 & 配额检查 ──────────────────────────────────────
+  const userId = getUserFromRequest(request)
+
+  if (!userId) {
+    return NextResponse.json(
+      { error: '请先登录后使用', code: 'LOGIN_REQUIRED' },
+      { status: 401 }
+    )
+  }
+
+  const consumeResult = await consumeOne(userId)
+  if (!consumeResult.ok) {
+    return NextResponse.json(
+      { error: consumeResult.message ?? '次数已用完，请购买点数' },
+      { status: 429 }
+    )
+  }
+
+  // ── 处理图片 ──────────────────────────────────────────────
   try {
     const formData = await request.formData()
     const imageFile = formData.get('image') as File

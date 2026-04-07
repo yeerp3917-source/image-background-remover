@@ -7,6 +7,20 @@ main = ".open-next/worker.js"
 directory = ".open-next/assets"
 binding = "ASSETS"
 
-# ⚠️ 不要在此处添加 REMOVE_BG_API_KEY！
-# 敏感环境变量请在 Cloudflare Workers Dashboard → Settings → Variables 中配置。
+# ⚠️ 敏感环境变量不要写在这里！
+# 在 Cloudflare Workers Dashboard → Settings → Variables 中配置：
+#   - REMOVE_BG_API_KEY
+#   - PAYPAL_CLIENT_ID
+#   - PAYPAL_CLIENT_SECRET
+#   - PAYPAL_ENV (sandbox 或 production)
+#   - NEXT_PUBLIC_APP_URL (如 https://image-background-remover.eu.cc)
 [vars]
+
+# ── KV 命名空间（用于存储用户点数）────────────────────────────
+# 部署前请先执行：
+#   wrangler kv namespace create CREDITS_KV
+# 然后把生成的 id 填入下面
+[[kv_namespaces]]
+binding = "CREDITS_KV"
+id = "your_kv_namespace_id_here"
+# preview_id = "your_preview_kv_namespace_id_here"  # 本地 wrangler dev 用
